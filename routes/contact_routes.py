@@ -1,38 +1,28 @@
 from flask import Blueprint, request, jsonify
-from services.openai_service import generate_reply
+from services.ai_service import generate_reply
 from services.email_service import send_email
+from services.storage_service import store_query
 
 contact_bp = Blueprint("contact", __name__)
 
-@contact_bp.route("/api/contact", methods=["POST"])
+@contact_bp.route("/contact", methods=["POST"])
 def contact():
 
     data = request.json
+    email = data["email"]
+    message = data["message"]
 
-    name = data.get("name")
-    email = data.get("email")
-    message = data.get("message")
+    ai_reply = generate_reply(message)
 
-    reply = generate_reply(message)
+    send_email(
+        email,
+        "Support Team Response",
+        ai_reply
+    )
 
-    email_body = f"""
-    Dear {name},
-
-    Thank you for contacting our support team.
-
-    Your Query:
-    {message}
-
-    Our Response:
-    {reply}
-
-    Best Regards,
-    AI Support Team
-    """
-
-    send_email(email, "Support Response", email_body)
+    store_query(email, message, ai_reply)
 
     return jsonify({
         "status": "success",
-        "ai_response": reply
+        "reply": ai_reply
     })
